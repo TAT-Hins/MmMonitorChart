@@ -12,10 +12,13 @@ import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.huawei.os.mmmonitorchart.R;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,33 +44,49 @@ public class LineChartFragment extends Fragment {
     private Legend mLegend;
 
     // for testing
-    private Map<Float, List<Float>> testData;
+    private Map<String, List<Float>> testData;
     private String[] titles = {"MemAvailable", "MemFree", "Slab", "SReclaimable", "SUnreclaim", "SwapFree"};
 
     public LineChartFragment() {
         // Required empty public constructor
     }
 
-    private int setTestData(Map<Float, List<Float>> dataSet) {
-        int length = 0;
-
+    private int setTestData(Map<String, List<Float>> dataSet) {
+        if (dataSet == null) {
+            return -1;
+        }
         float[] x = {0, 5, 10, 15, 20, 25};
+        List<Float> titleSetPoint = new ArrayList<>();
+        for (float f : x) {
+            titleSetPoint.add(f);
+        }
+        dataSet.put("title", titleSetPoint);
+
         float[][] oriData = {
-                {3000, 285, 765, 471, 286, 2489},
-                {2749, 285, 765, 471, 286, 2471},
-                {2712, 285, 765, 471, 286, 2356},
-                {2682, 285, 765, 471, 286, 2401},
-                {2917, 285, 682, 396, 286, 2217},
-                {2863, 285, 684, 398, 286, 2100}
+                {3000, 2749, 2712, 2682, 2917, 2863},
+                {285, 267, 260, 255, 279, 273},
+                {765, 765, 765, 765, 682, 684},
+                {471, 471, 471, 471, 396, 398},
+                {286, 286, 286, 286, 286, 286},
+                {2489, 2471, 2356, 2401, 2217, 2100}
         };
+
+        int length = x.length;
+        for (int i = 0; i < length; ++i) {
+            List<Float> list = new ArrayList<Float>();
+            for (float f : oriData[i]) {
+                list.add(f);
+            }
+            dataSet.put(titles[i], list);
+        }
 
         return length;
     }
 
-    private void initLineChart(LineChart chart) {
+    private void initLineChart() {
         // view initialization
-        chart.setDrawGridBackground(true);              // 网格线开关
-        chart.setPinchZoom(true);                       // 等比缩放
+        mLineChart.setDrawGridBackground(true);              // 网格线开关
+        mLineChart.setPinchZoom(true);                       // 等比缩放
 
         mXAxis = mLineChart.getXAxis();
         mXAxis.setPosition(XAxis.XAxisPosition.BOTTOM); // 设置X轴位置
@@ -87,9 +106,24 @@ public class LineChartFragment extends Fragment {
         mLegend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
     }
 
+    private void initLineChartDataSet(LineDataSet lineDataSet) {
+        initLineChartDataSet(lineDataSet, -1, null);
+    }
+
+    private void initLineChartDataSet(LineDataSet lineDataSet, int color) {
+        initLineChartDataSet(lineDataSet, color, null);
+    }
+
+    private void initLineChartDataSet(LineDataSet lineDataSet, LineDataSet.Mode mode) {
+        initLineChartDataSet(lineDataSet, -1, mode);
+    }
+
     private void initLineChartDataSet(LineDataSet lineDataSet, int color, LineDataSet.Mode mode) {
-        lineDataSet.setColor(color);
-        lineDataSet.setCircleColor(color);
+        if (-1 != color) {
+            lineDataSet.setColor(color);
+            lineDataSet.setCircleColor(color);
+        }
+
         lineDataSet.setLineWidth(1f);                   // 设置线条粗细
         lineDataSet.setCircleRadius(3f);                // 设置数据点半径
         lineDataSet.setDrawCircleHole(false);           // 设置数据点空心/圆心
@@ -102,6 +136,34 @@ public class LineChartFragment extends Fragment {
         if (mode == null) {
             lineDataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         }
+    }
+
+    private void initLineData_test() {
+        if (testData == null) {
+            testData = new HashMap<>();
+        }
+        int length = setTestData(testData);
+        List<Float> xPoint = testData.get(testData.get("title"));
+        for (Map.Entry<String, List<Float>> entry : testData.entrySet()) {
+            if (!entry.getKey().equals("title")) {
+                setOneLineData(entry.getKey(), xPoint, entry.getValue());
+            }
+        }
+    }
+
+    private void setOneLineData(String label, List<Float> x, List<Float> y) {
+        List<Entry> entries = new ArrayList<>();
+        for (int i = 0; i < x.size(); ++i) {
+            entries.add(new Entry(x.get(i), y.get(i)));
+        }
+
+        LineDataSet lineDataSet = new LineDataSet(entries, label);
+        // 初始化数据线格式
+        initLineChartDataSet(lineDataSet, LineDataSet.Mode.CUBIC_BEZIER);
+
+        LineData lineData = new LineData(lineDataSet);
+        lineData.setDrawValues(true);                   // 显示数据标签
+        mLineChart.setData(lineData);
     }
 
     /**
@@ -129,6 +191,9 @@ public class LineChartFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+
+        initLineChart();
+        initLineData_test();
     }
 
     @Override
